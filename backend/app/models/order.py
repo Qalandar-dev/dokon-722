@@ -26,6 +26,7 @@ from app.models.enums import (
     PaymentMethod,
     PaymentStatus,
     StatusField,
+    StockState,
 )
 
 if TYPE_CHECKING:
@@ -125,6 +126,11 @@ class Order(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     promo_code: Mapped[str | None] = mapped_column(String(32))
 
+    stock_state: Mapped[StockState] = mapped_column(
+        str_enum(StockState, "order_stock_state"),
+        default=StockState.RESERVED,
+        server_default="reserved",
+    )
     idempotency_key: Mapped[str] = mapped_column(String(64))
     # Set while stock is reserved for an unpaid online payment; cleared when paid/released.
     reservation_expires_at: Mapped[datetime | None]

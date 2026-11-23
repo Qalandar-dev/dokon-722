@@ -4,17 +4,22 @@ from __future__ import annotations
 
 import itertools
 import uuid
+from dataclasses import dataclass
 from decimal import Decimal
 
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import (
     Category,
+    DeliveryMethod,
+    DeliveryRate,
     Inventory,
     Order,
     OrderItem,
     Product,
     ProductVariant,
+    StoreSetting,
     User,
 )
 from app.models.enums import PaymentMethod
@@ -36,7 +41,8 @@ async def make_user(db: AsyncSession, **kw: object) -> User:
 
 async def make_category(db: AsyncSession, **kw: object) -> Category:
     n = _n()
-    cat = Category(name=f"Kategoriya {n}", slug=f"kategoriya-{n}-{uuid.uuid4().hex[:6]}", **kw)
+    kw.setdefault("name", f"Kategoriya {n}")
+    cat = Category(slug=f"kategoriya-{n}-{uuid.uuid4().hex[:6]}", **kw)
     db.add(cat)
     await db.flush()
     return cat
@@ -116,3 +122,56 @@ def order_item_for(order: Order, variant: ProductVariant, quantity: int = 1) -> 
         quantity=quantity,
         line_total=variant.price * quantity,
     )
+
+
+# --- Shop setup for service tests ----------------------------------------------------
+
+TASHKENT_REGION_ID = 1  # seeded: Toshkent shahri
+BEKTEMIR_DISTRICT_ID = 1  # seeded: first district of Toshkent shahri
+
+
+@dataclass
+class Shop:
+    user: User
+    variant: ProductVariant
+    courier_id: uuid.UUID
+
+
+async def courier_method(db: AsyncSession) -> DeliveryMethod:
+    method = await db.scalar(select(DeliveryMethod).where(DeliveryMethod.code == "courier"))
+    assert method is not None
+    return method
+
+
+async def make_shop(
+    db: AsyncSession, *, price: str = "100000", stock: int = 10, delivery_price: str = "25000"
+) -> Shop:
+    user = await make_user(db)
+    variant = await make_variant(db, price=price, stock=stock, is_default=True)
+    courier = await courier_method(db)
+    existing = await db.scalar(
+        select(DeliveryRate).where(
+            DeliveryRate.method_id == courier.id,
+            DeliveryRate.region_id == TASHKENT_REGION_ID,
+            DeliveryRate.district_id.is_(None),
+        )
+    )
+    if existing is None:
+        db.add(
+            DeliveryRate(
+                method_id=courier.id,
+                region_id=TASHKENT_REGION_ID,
+                price=Decimal(delivery_price),
+                eta_min_days=1,
+                eta_max_days=2,
+            )
+        )
+    await db.commit()
+    return Shop(user=user, variant=variant, courier_id=courier.id)
+
+
+async def set_setting(db: AsyncSession, key: str, value: object) -> None:
+    await db.execute(
+        update(StoreSetting).where(StoreSetting.key == key).values(value={"value": value})
+    )
+    await db.commit()

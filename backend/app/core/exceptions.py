@@ -63,6 +63,21 @@ class BusinessRuleError(AppError):
     message = "Amalni bajarib bo‘lmaydi."
 
 
+class InsufficientStockError(BusinessRuleError):
+    code = "insufficient_stock"
+    message = "Omborda yetarli mahsulot yo‘q."
+
+
+class InvalidTransitionError(BusinessRuleError):
+    code = "invalid_status_transition"
+    message = "Bu holatga o‘tkazib bo‘lmaydi."
+
+
+class PromoCodeError(BusinessRuleError):
+    code = "promo_code_invalid"
+    message = "Promokod yaroqsiz."
+
+
 class AuthenticationError(AppError):
     status_code = status.HTTP_401_UNAUTHORIZED
     code = "unauthorized"

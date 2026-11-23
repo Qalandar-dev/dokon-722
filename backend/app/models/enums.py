@@ -99,3 +99,12 @@ class NotificationStatus(StrEnum):
     PENDING = "pending"
     SENT = "sent"
     FAILED = "failed"
+
+
+class StockState(StrEnum):
+    """What the order currently holds in inventory."""
+
+    RESERVED = "reserved"  # held (reserved), not yet deducted from on_hand
+    SOLD = "sold"  # deducted from on_hand (paid online, or cash order confirmed)
+    RELEASED = "released"  # reservation given back (cancelled/expired before sale)
+    RETURNED = "returned"  # sold stock put back on the shelf (cancel after sale / refund)

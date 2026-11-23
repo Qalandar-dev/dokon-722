@@ -4,8 +4,9 @@ Universal e-commerce platform for the Uzbek market: a Telegram bot for customers
 a web admin panel for staff, a FastAPI backend, PostgreSQL, Redis, Click and Payme
 payments, and nationwide delivery. Uzbek (Latin) interface, UZS, Asia/Tashkent.
 
-> **Status: Phases 1–3 complete** (architecture, project structure, configuration,
-> Docker, database schema and reference data — see [`docs/DATABASE.md`](docs/DATABASE.md)). Catalog, cart, orders, payments, bot flows and admin screens are built in
+> **Status: Phases 1–4 complete** (architecture, project structure, configuration,
+> Docker, database schema and reference data, business services — see
+> [`docs/DATABASE.md`](docs/DATABASE.md) and [`docs/SERVICES.md`](docs/SERVICES.md)). Catalog, cart, orders, payments, bot flows and admin screens are built in
 > later phases; see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full plan.
 > Nothing in this repository processes real payments yet.
 
