@@ -306,3 +306,15 @@ async def test_invalid_promo_codes_rejected(
     await assert_rejected(
         db, constraint, PromoCode(code=code, discount_type=dtype, value=Decimal(value))
     )
+
+
+async def test_admin_emails_unique_case_insensitively(db: AsyncSession) -> None:
+    from app.core.security import hash_password
+    from app.models import AdminUser
+
+    def admin(email: str) -> AdminUser:
+        return AdminUser(email=email, full_name="A", password_hash=hash_password("x"), role_id=3)
+
+    db.add_all([admin("one@store.uz"), admin("two@store.uz")])  # many admins allowed
+    await db.flush()
+    await assert_rejected(db, "uq_admin_users_email_lower", admin("ONE@store.uz"))

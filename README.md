@@ -4,9 +4,9 @@ Universal e-commerce platform for the Uzbek market: a Telegram bot for customers
 a web admin panel for staff, a FastAPI backend, PostgreSQL, Redis, Click and Payme
 payments, and nationwide delivery. Uzbek (Latin) interface, UZS, Asia/Tashkent.
 
-> **Status: Phases 1–4 complete** (architecture, project structure, configuration,
-> Docker, database schema and reference data, business services — see
-> [`docs/DATABASE.md`](docs/DATABASE.md) and [`docs/SERVICES.md`](docs/SERVICES.md)). Catalog, cart, orders, payments, bot flows and admin screens are built in
+> **Status: Phases 1–5 complete** (architecture, configuration, Docker, database,
+> business services and the HTTP API — see [`docs/DATABASE.md`](docs/DATABASE.md),
+> [`docs/SERVICES.md`](docs/SERVICES.md) and [`docs/API.md`](docs/API.md)). Catalog, cart, orders, payments, bot flows and admin screens are built in
 > later phases; see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full plan.
 > Nothing in this repository processes real payments yet.
 
@@ -188,11 +188,26 @@ Never commit `.env`.
    internal Docker network. All app containers run as a non-root user (uid 10001).
 6. Back up the `postgres_data` and `media` volumes (a full backup/restore runbook comes in Phase 12).
 
-## Click, Payme, delivery, admin accounts
+## Admin account setup
+
+Create the first super-admin (the password is asked interactively, or read from
+`ADMIN_PASSWORD`; never pass it as an argument):
+
+```bash
+# Docker
+docker compose exec api python -m app.scripts.create_admin --email owner@example.uz --name "Ism Familiya"
+# Local
+cd backend && uv run python -m app.scripts.create_admin --email owner@example.uz --name "Ism Familiya"
+```
+
+Further staff accounts are created by a super-admin in the admin panel (or `POST /api/v1/admin/staff`).
+Roles: `super_admin` (everything), `manager` (no staff, settings, audit log), `operator`
+(orders, read-only catalog, inventory and customers). The full matrix is in `docs/API.md`.
+
+## Click, Payme, delivery
 
 These sections are completed in their phases:
 
-- **Admin account setup:** Phase 5 adds `scripts/create_admin`.
 - **Delivery configuration:** Phase 8 (regions and districts are seeded in Phase 3).
 - **Click / Payme setup:** Phase 9. This needs the official documentation and sandbox credentials;
   see [`docs/ARCHITECTURE.md` §7](docs/ARCHITECTURE.md#7-payments-phase-9--requirements-and-blockers).

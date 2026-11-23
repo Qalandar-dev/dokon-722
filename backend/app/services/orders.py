@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-from sqlalchemy import func, select, update
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -154,6 +154,58 @@ class OrderService:
                 .limit(page_size)
             )
         ).all()
+        return Page(items=list(orders), total=total, page=page, page_size=page_size)
+
+    async def list_for_admin(
+        self,
+        *,
+        status: OrderStatus | None = None,
+        payment_status: PaymentStatus | None = None,
+        delivery_status: DeliveryStatus | None = None,
+        payment_method: PaymentMethod | None = None,
+        region_id: int | None = None,
+        user_id: uuid.UUID | None = None,
+        query: str | None = None,
+        created_from: datetime | None = None,
+        created_to: datetime | None = None,
+        sort: str = "-created_at",
+        page: int = 1,
+        page_size: int = 20,
+    ) -> Page[Order]:
+        stmt = select(Order)
+        for column, value in (
+            (Order.status, status),
+            (Order.payment_status, payment_status),
+            (Order.delivery_status, delivery_status),
+            (Order.payment_method, payment_method),
+            (Order.region_id, region_id),
+            (Order.user_id, user_id),
+        ):
+            if value is not None:
+                stmt = stmt.where(column == value)
+        if created_from is not None:
+            stmt = stmt.where(Order.created_at >= created_from)
+        if created_to is not None:
+            stmt = stmt.where(Order.created_at < created_to)
+        if query and (q := query.strip()):
+            digits = "".join(ch for ch in q if ch.isdigit())
+            conditions = [Order.number.ilike(f"%{q}%"), Order.recipient_name.ilike(f"%{q}%")]
+            if len(digits) >= 4:
+                conditions.append(Order.recipient_phone.like(f"%{digits}%"))
+            stmt = stmt.where(or_(*conditions))
+        total = await self.session.scalar(select(func.count()).select_from(stmt.subquery())) or 0
+        order_by = {
+            "-created_at": Order.created_at.desc(),
+            "created_at": Order.created_at.asc(),
+            "-total": Order.total.desc(),
+            "total": Order.total.asc(),
+        }.get(sort, Order.created_at.desc())
+        orders = await self.session.scalars(
+            stmt.options(selectinload(Order.items))
+            .order_by(order_by, Order.id)
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
         return Page(items=list(orders), total=total, page=page, page_size=page_size)
 
     # --- Checkout --------------------------------------------------------------

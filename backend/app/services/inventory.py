@@ -196,8 +196,12 @@ class InventoryService:
         delta: int,
         reason: str,
         admin_user_id: uuid.UUID | None,
+        commit: bool = True,
     ) -> StockLevel:
-        """Manual stock change by staff: positive = restock, negative = write-off/correction."""
+        """Manual stock change by staff: positive = restock, negative = write-off/correction.
+
+        ``commit=False`` adds the change to the caller's transaction instead.
+        """
         if delta == 0:
             raise BusinessRuleError(
                 "O‘zgarish miqdori 0 bo‘lishi mumkin emas.", code="invalid_quantity"
@@ -234,7 +238,8 @@ class InventoryService:
             entity_id=variant_id,
             changes={"delta": delta, "reason": reason.strip(), "on_hand_after": level.on_hand},
         )
-        await self.session.commit()
+        if commit:
+            await self.session.commit()
         return level
 
     async def low_stock(self, limit: int = 100) -> list[LowStockItem]:
@@ -264,3 +269,75 @@ class InventoryService:
             .limit(limit)
         )
         return [LowStockItem(*row) for row in rows]
+
+
+@dataclass(frozen=True, slots=True)
+class StockRow:
+    variant_id: uuid.UUID
+    product_id: uuid.UUID
+    product_name: str
+    variant_name: str
+    sku: str
+    is_active: bool
+    on_hand: int
+    reserved: int
+    low_stock_threshold: int | None
+    is_low: bool
+
+    @property
+    def available(self) -> int:
+        return self.on_hand - self.reserved
+
+
+async def stock_list(
+    session: AsyncSession,
+    *,
+    query: str | None = None,
+    low_only: bool = False,
+    page: int = 1,
+    page_size: int = 50,
+) -> tuple[list[StockRow], int]:
+    default = await StoreSettingsService(session).low_stock_threshold()
+    threshold = func.coalesce(Inventory.low_stock_threshold, default)
+    is_low = (Inventory.on_hand - Inventory.reserved <= threshold).label("is_low")
+    stmt = (
+        select(
+            ProductVariant.id,
+            Product.id,
+            Product.name,
+            ProductVariant.name,
+            ProductVariant.sku,
+            ProductVariant.is_active,
+            Inventory.on_hand,
+            Inventory.reserved,
+            Inventory.low_stock_threshold,
+            is_low,
+        )
+        .join(Inventory, Inventory.variant_id == ProductVariant.id)
+        .join(Product, Product.id == ProductVariant.product_id)
+        .where(Product.deleted_at.is_(None))
+    )
+    if query and (q := query.strip()):
+        stmt = stmt.where(Product.name.ilike(f"%{q}%") | ProductVariant.sku.ilike(f"%{q}%"))
+    if low_only:
+        stmt = stmt.where(Inventory.on_hand - Inventory.reserved <= threshold)
+    total = await session.scalar(select(func.count()).select_from(stmt.subquery())) or 0
+    rows = await session.execute(
+        stmt.order_by(Inventory.on_hand - Inventory.reserved, Product.name, ProductVariant.sku)
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+    return [StockRow(*r) for r in rows], total
+
+
+async def movements(
+    session: AsyncSession, variant_id: uuid.UUID, *, page: int = 1, page_size: int = 50
+) -> tuple[list[InventoryMovement], int]:
+    base = select(InventoryMovement).where(InventoryMovement.variant_id == variant_id)
+    total = await session.scalar(select(func.count()).select_from(base.subquery())) or 0
+    items = await session.scalars(
+        base.order_by(InventoryMovement.created_at.desc(), InventoryMovement.id)
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+    return list(items), total

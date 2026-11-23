@@ -8,6 +8,7 @@ migrations in `backend/app/database/migrations/versions/`:
 | `95807fc3202d` initial schema | 28 tables, `pg_trgm` extension, `order_number_seq` |
 | `7642bc13bed8` seed reference data | 14 regions, 206 districts/cities, 3 roles, store settings, 2 delivery methods (no prices) |
 | `25aeb6aefb6f` order stock state | `orders.stock_state`: reserved / sold / released / returned |
+| `a8fc36f3032a` fix admin email unique index | rebuilds the case-insensitive email index on `lower(email)` (the first version indexed a constant and allowed only one admin) |
 
 ## Entity relationships
 

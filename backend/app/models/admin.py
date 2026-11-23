@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import ARRAY, BigInteger, ForeignKey, Index, SmallInteger, String, func, true
+from sqlalchemy import ARRAY, BigInteger, ForeignKey, Index, SmallInteger, String, text, true
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base, CreatedAtMixin, TimestampMixin, UUIDPrimaryKeyMixin
@@ -28,7 +28,7 @@ class AdminUser(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "admin_users"
     __table_args__ = (
         # Case-insensitive unique email without needing the citext extension.
-        Index("uq_admin_users_email_lower", func.lower("email"), unique=True),
+        Index("uq_admin_users_email_lower", text("lower(email)"), unique=True),
     )
 
     email: Mapped[str] = mapped_column(String(254))

@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api.middleware import RequestContextMiddleware
 from app.api.v1.router import api_router
@@ -53,6 +54,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     register_exception_handlers(app)
     app.include_router(api_router, prefix=settings.api_v1_prefix)
+    if settings.storage_backend == "local" and not settings.is_production:
+        # In Docker/production Nginx serves /media directly from the shared volume.
+        app.mount(
+            settings.media_url,
+            StaticFiles(directory=settings.media_root, check_dir=False),
+            name="media",
+        )
     return app
 
 
