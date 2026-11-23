@@ -4,8 +4,8 @@ Universal e-commerce platform for the Uzbek market: a Telegram bot for customers
 a web admin panel for staff, a FastAPI backend, PostgreSQL, Redis, Click and Payme
 payments, and nationwide delivery. Uzbek (Latin) interface, UZS, Asia/Tashkent.
 
-> **Status: Phases 1–2 complete** (architecture, project structure, configuration,
-> Docker). Catalog, cart, orders, payments, bot flows and admin screens are built in
+> **Status: Phases 1–3 complete** (architecture, project structure, configuration,
+> Docker, database schema and reference data — see [`docs/DATABASE.md`](docs/DATABASE.md)). Catalog, cart, orders, payments, bot flows and admin screens are built in
 > later phases; see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full plan.
 > Nothing in this repository processes real payments yet.
 
@@ -121,6 +121,8 @@ migrations before committing them.
 ## Tests and quality checks
 
 Backend tests use a **separate database** (`online_store_test`) and Redis DB 15.
+The test run **drops and rebuilds that database's schema** with the real migrations,
+so never point `TEST_DATABASE_URL` at a database holding real data.
 
 ```bash
 cd backend

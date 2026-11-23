@@ -1,6 +1,6 @@
 # Online Store — Architecture and Delivery Plan
 
-Status: **Phases 1–2 complete.** Phases 3+ need approval before work starts.
+Status: **Phases 1–3 complete.** Later phases need approval before work starts.
 Last updated: 2026-11-23.
 
 ---
@@ -283,7 +283,7 @@ Architecture: a `PaymentProvider` interface (`create_payment(order) → redirect
 | Phase | Scope | Done when |
 |---|---|---|
 | 1–2 ✅ | Plan, structure, config, logging, errors, security primitives, Docker (dev/prod), Nginx, CI-ready tooling | Stack runs, health is green, tests pass |
-| 3 | Models, initial migration, region/district seed, ERD doc | Migration up/down on a clean DB, constraint tests |
+| 3 ✅ | Models, initial migration, region/district seed, ERD doc ([DATABASE.md](DATABASE.md)) | Migration up/down on a clean DB, constraint tests |
 | 4 | Repositories + services (catalog, cart, promo, delivery quote, inventory, order state machines) | Unit and DB tests incl. concurrent oversell test |
 | 5 | Auth (login, refresh rotation, logout, RBAC deps), public, customer and admin APIs, rate limiting, `create_admin` script | API tests incl. permission matrix |
 | 6 | Telegram bot | Handler tests with a mocked API/Bot |
@@ -302,7 +302,7 @@ wildcard CORS, or `PAYMENT_MODE=live` without credentials.
 
 ## Open decisions for the business owner
 
-1. **Cash on delivery** (*naqd pul / karta kuryerga*) — the spec lists only Click and Payme. Many Uzbek shoppers expect COD. Add it?
+1. **Cash on delivery** (*naqd pul / karta kuryerga*) — the spec lists only Click and Payme. Many Uzbek shoppers expect COD. *Phase 3 default:* the schema supports it, switched off by the `payments.cash_on_delivery_enabled` setting.
 2. Confirm the **stock reservation policy** above (30 min hold for online payments).
-3. **Fiscal receipts / IKPU codes** — required for your business type?
+3. **Fiscal receipts / IKPU codes** — required for your business type? *Phase 3 default:* optional `ikpu_code` / `package_code` fields on variants, snapshotted on order items.
 4. Production **domain names** (e.g. `shop.example.uz`, `admin.example.uz`) for TLS and CORS.
