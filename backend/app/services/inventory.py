@@ -336,8 +336,6 @@ async def movements(
     base = select(InventoryMovement).where(InventoryMovement.variant_id == variant_id)
     total = await session.scalar(select(func.count()).select_from(base.subquery())) or 0
     items = await session.scalars(
-        base.order_by(InventoryMovement.created_at.desc(), InventoryMovement.id)
-        .offset((page - 1) * page_size)
-        .limit(page_size)
+        base.order_by(InventoryMovement.seq.desc()).offset((page - 1) * page_size).limit(page_size)
     )
     return list(items), total

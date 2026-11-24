@@ -9,9 +9,10 @@ from typing import Annotated
 from fastapi import APIRouter, Query
 from sqlalchemy import select
 
-from app.api.deps import SessionDep, StorageDep
+from app.api.deps import SessionDep, SettingsDep, StorageDep
 from app.core.exceptions import NotFoundError
 from app.models import Region
+from app.models.enums import PaymentMethod
 from app.repositories.products import ProductFilters, ProductSort
 from app.schemas.catalog import (
     CategoryNodeOut,
@@ -28,6 +29,7 @@ from app.schemas.common import Page
 from app.services.admin_config import PUBLIC_SETTINGS, DeliveryAdminService, SettingsAdminService
 from app.services.catalog import CatalogService
 from app.services.delivery import DeliveryService
+from app.services.store_settings import StoreSettingsService
 
 router = APIRouter(tags=["catalog"])
 
@@ -128,12 +130,17 @@ async def delivery_quotes(
 
 
 @router.get("/store", response_model=StoreInfoOut, tags=["store"])
-async def store_info(session: SessionDep) -> StoreInfoOut:
+async def store_info(session: SessionDep, settings: SettingsDep) -> StoreInfoOut:
     values = await SettingsAdminService(session).values(PUBLIC_SETTINGS)
+    store_settings = StoreSettingsService(session)
     return StoreInfoOut(
         name=values.get("store.name") or "Online Store",
         phone=values.get("store.phone"),
         address=values.get("store.address"),
         support_telegram=values.get("store.support_telegram"),
         currency_display=values.get("store.currency_display") or "so‘m",
+        payment_methods=[
+            m for m in PaymentMethod if await store_settings.payment_method_enabled(m)
+        ],
+        reservation_minutes=settings.order_reservation_ttl_minutes,
     )

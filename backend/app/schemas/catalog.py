@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 from app.integrations.storage.base import Storage
 from app.models import District, Product, ProductImage, ProductVariant, Region
-from app.models.enums import DeliveryMethodKind, DistrictKind
+from app.models.enums import DeliveryMethodKind, DistrictKind, PaymentMethod
 from app.repositories.products import ProductCard
 from app.schemas.common import InputSchema, Money, Schema
 from app.services.cart import CartSummary
@@ -22,6 +22,8 @@ class ImageOut(BaseModel):
     alt_text: str | None
     is_main: bool
     sort_order: int
+    # Telegram's id for an already uploaded copy, so the bot does not re-upload it.
+    telegram_file_id: str | None = None
 
     @classmethod
     def build(cls, image: ProductImage, storage: Storage) -> ImageOut:
@@ -31,6 +33,7 @@ class ImageOut(BaseModel):
             alt_text=image.alt_text,
             is_main=image.is_main,
             sort_order=image.sort_order,
+            telegram_file_id=image.telegram_file_id,
         )
 
 
@@ -173,6 +176,9 @@ class StoreInfoOut(BaseModel):
     address: str | None
     support_telegram: str | None
     currency_display: str
+    payment_methods: list[PaymentMethod]
+    # Minutes an unpaid online order keeps its items reserved.
+    reservation_minutes: int
 
 
 # --- Cart -----------------------------------------------------------------------------
@@ -243,3 +249,7 @@ def region_out(r: Region) -> RegionOut:
 
 def district_out(d: District) -> DistrictOut:
     return DistrictOut.model_validate(d)
+
+
+class TelegramFileIdIn(InputSchema):
+    telegram_file_id: str = Field(min_length=1, max_length=255)

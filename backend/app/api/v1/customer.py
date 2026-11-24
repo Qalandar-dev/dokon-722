@@ -12,7 +12,15 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Header, Query, Response, status
 
 from app.api.deps import CustomerDep, SessionDep, bot_auth
-from app.schemas.catalog import AddCartItemIn, CartOut, PromoCodeIn, UpdateCartItemIn
+from app.core.exceptions import NotFoundError
+from app.models import ProductImage
+from app.schemas.catalog import (
+    AddCartItemIn,
+    CartOut,
+    PromoCodeIn,
+    TelegramFileIdIn,
+    UpdateCartItemIn,
+)
 from app.schemas.common import Page
 from app.schemas.orders import (
     AddressIn,
@@ -203,3 +211,22 @@ async def cancel_order(
         order_id, actor=Actor.customer(user.id), reason=body.reason or "Mijoz bekor qildi"
     )
     return OrderOut.build(order)
+
+
+# --- Bot helpers ------------------------------------------------------------------------
+
+
+@router.put(
+    "/bot/product-images/{image_id}/telegram-file-id",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(bot_auth)],
+)
+async def save_telegram_file_id(
+    image_id: uuid.UUID, body: TelegramFileIdIn, session: SessionDep
+) -> None:
+    """Remember Telegram's file id after the bot uploaded an image once."""
+    image = await session.get(ProductImage, image_id)
+    if image is None:
+        raise NotFoundError("Rasm topilmadi.")
+    image.telegram_file_id = body.telegram_file_id
+    await session.commit()

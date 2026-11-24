@@ -6,8 +6,10 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import (
+    BigInteger,
     CheckConstraint,
     ForeignKey,
+    Identity,
     Index,
     Integer,
     SmallInteger,
@@ -152,7 +154,7 @@ class Order(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         back_populates="order",
         cascade="all, delete-orphan",
         passive_deletes=True,
-        order_by="OrderStatusHistory.created_at",
+        order_by="OrderStatusHistory.seq",
     )
     payments: Mapped[list[Payment]] = relationship(back_populates="order")
 
@@ -196,6 +198,8 @@ class OrderItem(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
 class OrderStatusHistory(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
     __tablename__ = "order_status_history"
 
+    # Exact order of changes (several can share created_at within one transaction).
+    seq: Mapped[int] = mapped_column(BigInteger, Identity(always=True), unique=True)
     order_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("orders.id", ondelete="CASCADE"), index=True
     )

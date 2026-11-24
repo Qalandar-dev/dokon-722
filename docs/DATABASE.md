@@ -9,6 +9,7 @@ migrations in `backend/app/database/migrations/versions/`:
 | `7642bc13bed8` seed reference data | 14 regions, 206 districts/cities, 3 roles, store settings, 2 delivery methods (no prices) |
 | `25aeb6aefb6f` order stock state | `orders.stock_state`: reserved / sold / released / returned |
 | `a8fc36f3032a` fix admin email unique index | rebuilds the case-insensitive email index on `lower(email)` (the first version indexed a constant and allowed only one admin) |
+| `39074d7cd277` ledger sequence columns | `seq` identity on `inventory_movements` and `order_status_history`: exact order of entries written in one transaction (timestamps are equal there) |
 
 ## Entity relationships
 

@@ -17,6 +17,8 @@ x-backend: &backend
     DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
     REDIS_URL: redis://redis:6379/0
     API_INTERNAL_URL: http://api:8000
+    # The bot downloads product photos here (internal network) to upload them to Telegram.
+    BOT_MEDIA_BASE_URL: http://nginx:8080
     MEDIA_ROOT: /app/media
   restart: unless-stopped
   networks: [internal]

@@ -3,7 +3,16 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, ForeignKey, Index, Integer, String, func
+from sqlalchemy import (
+    BigInteger,
+    CheckConstraint,
+    ForeignKey,
+    Identity,
+    Index,
+    Integer,
+    String,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base, CreatedAtMixin, UUIDPrimaryKeyMixin, str_enum
@@ -50,10 +59,13 @@ class InventoryMovement(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
 
     __tablename__ = "inventory_movements"
     __table_args__ = (
-        Index("ix_inventory_movements_variant_created", "variant_id", "created_at"),
+        Index("ix_inventory_movements_variant_seq", "variant_id", "seq"),
         CheckConstraint("on_hand_delta <> 0 OR reserved_delta <> 0", name="changes_something"),
     )
 
+    # Insertion order. created_at is the transaction start time, so rows written in one
+    # transaction share it; seq keeps the ledger in the exact order of the changes.
+    seq: Mapped[int] = mapped_column(BigInteger, Identity(always=True), unique=True)
     variant_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("product_variants.id", ondelete="CASCADE")
     )

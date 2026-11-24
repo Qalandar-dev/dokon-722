@@ -30,3 +30,6 @@ media/
 .idea/
 .vscode/
 *.swp
+
+# Redis snapshots from local development
+dump.rdb
