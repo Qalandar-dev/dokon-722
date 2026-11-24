@@ -5,6 +5,7 @@ import { useState, type ReactNode } from "react";
 import { Toaster } from "sonner";
 
 import { ApiError } from "@/lib/api-client";
+import { AuthProvider } from "@/lib/auth";
 
 function makeQueryClient(): QueryClient {
   return new QueryClient({
@@ -25,7 +26,7 @@ export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(makeQueryClient);
   return (
     <QueryClientProvider client={queryClient}>
-      {children}
+      <AuthProvider>{children}</AuthProvider>
       <Toaster richColors position="top-right" closeButton />
     </QueryClientProvider>
   );
