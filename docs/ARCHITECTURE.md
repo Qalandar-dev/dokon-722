@@ -1,6 +1,6 @@
 # Online Store — Architecture and Delivery Plan
 
-Status: **Phases 1–2 complete.** Phases 3+ need approval before work starts.
+Status: **Phases 1–8 and 10–12 complete; Phase 9 partly (payment architecture + simulated provider; Click/Payme adapters blocked on official docs).**
 Last updated: 2026-11-23.
 
 ---
@@ -283,16 +283,16 @@ Architecture: a `PaymentProvider` interface (`create_payment(order) → redirect
 | Phase | Scope | Done when |
 |---|---|---|
 | 1–2 ✅ | Plan, structure, config, logging, errors, security primitives, Docker (dev/prod), Nginx, CI-ready tooling | Stack runs, health is green, tests pass |
-| 3 | Models, initial migration, region/district seed, ERD doc | Migration up/down on a clean DB, constraint tests |
-| 4 | Repositories + services (catalog, cart, promo, delivery quote, inventory, order state machines) | Unit and DB tests incl. concurrent oversell test |
-| 5 | Auth (login, refresh rotation, logout, RBAC deps), public, customer and admin APIs, rate limiting, `create_admin` script | API tests incl. permission matrix |
-| 6 | Telegram bot | Handler tests with a mocked API/Bot |
-| 7 | Admin panel | Component tests, a Playwright smoke test of key flows |
-| 8 | Checkout, orders, inventory and delivery end-to-end | Order lifecycle tests |
-| 9 | Click + Payme adapters (needs §7 inputs) | Callback validation, signature, idempotency and amount tests |
-| 10 | Worker jobs: notifications, reservation expiry, low stock, scheduled reports | Job tests |
-| 11 | Security hardening, CI (GitHub Actions), coverage gaps | Security review checklist |
-| 12 | Docs, backup/restore runbook, production deployment guide | Fresh-server deploy rehearsal |
+| 3 ✅ | Models, initial migration, region/district seed, ERD doc ([DATABASE.md](DATABASE.md)) | Migration up/down on a clean DB, constraint tests |
+| 4 ✅ | Repositories + services (catalog, cart, promo, delivery quote, inventory, order state machines) — see [SERVICES.md](SERVICES.md) | Unit and DB tests incl. concurrent oversell test |
+| 5 ✅ | Auth (login, refresh rotation, logout, RBAC deps), public, customer and admin APIs, rate limiting, `create_admin` script — see [API.md](API.md) | API tests incl. permission matrix |
+| 6 ✅ | Telegram bot — see [BOT.md](BOT.md) | Handler tests with a mocked API/Bot |
+| 7 ✅ | Admin panel — see [ADMIN_PANEL.md](ADMIN_PANEL.md) | Component tests, a Playwright smoke test of key flows |
+| 8 ✅ | Checkout, orders, inventory and delivery end-to-end (returned parcels, settings-driven low stock, cross-interface test) | Order lifecycle tests |
+| 9 ◐ | Payment architecture, simulated provider, bot/admin integration ✅; Click + Payme adapters ⛔ blocked on §7 inputs — see [PAYMENTS.md](PAYMENTS.md) | Callback validation, signature, idempotency and amount tests |
+| 10 ✅ | Worker jobs: notifications, reservation expiry, low stock, scheduled reports — see [WORKER.md](WORKER.md) | Job tests |
+| 11 ✅ | Security hardening, CI (GitHub Actions), coverage gaps — see [SECURITY.md](SECURITY.md) | Security review checklist |
+| 12 ✅ | Docs, backup/restore scripts, production deployment guide — see [DEPLOYMENT.md](DEPLOYMENT.md) | Fresh-server deploy rehearsal (done on Docker) |
 
 ## 10. Environment variables
 
@@ -302,7 +302,7 @@ wildcard CORS, or `PAYMENT_MODE=live` without credentials.
 
 ## Open decisions for the business owner
 
-1. **Cash on delivery** (*naqd pul / karta kuryerga*) — the spec lists only Click and Payme. Many Uzbek shoppers expect COD. Add it?
+1. **Cash on delivery** (*naqd pul / karta kuryerga*) — the spec lists only Click and Payme. Many Uzbek shoppers expect COD. *Phase 3 default:* the schema supports it, switched off by the `payments.cash_on_delivery_enabled` setting.
 2. Confirm the **stock reservation policy** above (30 min hold for online payments).
-3. **Fiscal receipts / IKPU codes** — required for your business type?
+3. **Fiscal receipts / IKPU codes** — required for your business type? *Phase 3 default:* optional `ikpu_code` / `package_code` fields on variants, snapshotted on order items.
 4. Production **domain names** (e.g. `shop.example.uz`, `admin.example.uz`) for TLS and CORS.

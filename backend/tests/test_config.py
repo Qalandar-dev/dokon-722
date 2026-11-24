@@ -61,6 +61,8 @@ def test_valid_production_config() -> None:
         jwt_secret_key=SecretStr(STRONG),
         bot_api_secret=SecretStr(STRONG + "b"),
         cors_origins=["https://admin.example.uz"],
+        trusted_hosts=["admin.example.uz"],
+        public_base_url="https://admin.example.uz",
     )
     assert s.is_production
     assert s.payment_mode is PaymentMode.MOCK
@@ -84,3 +86,17 @@ def test_validation_errors_do_not_echo_secret_values(monkeypatch: pytest.MonkeyP
     message = str(exc.value)
     assert "must-not-leak" not in message  # pydantic truncates, so check a fragment
     assert "input_value" not in message
+
+
+def test_production_requires_trusted_hosts_and_https() -> None:
+    with pytest.raises(ValidationError) as exc:
+        Settings(
+            _env_file=None,
+            environment=Environment.PRODUCTION,
+            jwt_secret_key=SecretStr(STRONG),
+            bot_api_secret=SecretStr(STRONG + "b"),
+            cors_origins=["https://admin.example.uz"],
+            public_base_url="http://admin.example.uz",
+        )
+    assert "TRUSTED_HOSTS" in str(exc.value)
+    assert "https://" in str(exc.value)

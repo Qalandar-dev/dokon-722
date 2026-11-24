@@ -90,6 +90,9 @@ class Settings(BaseSettings):
     refresh_token_ttl_days: int = Field(default=14, ge=1, le=90)
     # Base URL the bot uses to reach the API over the internal Docker network.
     api_internal_url: str = "http://api:8000"
+    # Where the bot downloads product images to upload them to Telegram (internal network).
+    # Empty = API_INTERNAL_URL (the API serves /media outside production; Nginx does in Docker).
+    bot_media_base_url: str | None = None
     # Shared secret the bot uses to call customer endpoints on behalf of a Telegram user.
     bot_api_secret: SecretStr = SecretStr("change-me-bot-api-secret-0123456789abcdef")
 
@@ -163,6 +166,10 @@ class Settings(BaseSettings):
             problems.append("DEBUG must be false in production")
         if "*" in self.cors_origins:
             problems.append("CORS_ORIGINS must list explicit origins in production")
+        if "*" in self.trusted_hosts:
+            problems.append("TRUSTED_HOSTS must list your domain(s) in production")
+        if not self.public_base_url.startswith("https://"):
+            problems.append("PUBLIC_BASE_URL must be an https:// URL in production")
         if self.payment_mode is PaymentMode.LIVE:
             if not (self.click_service_id and self.click_merchant_id and self.click_secret_key):
                 problems.append("Click credentials are required when PAYMENT_MODE=live")

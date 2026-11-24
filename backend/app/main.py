@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api.middleware import RequestContextMiddleware
 from app.api.v1.router import api_router
@@ -16,6 +17,17 @@ from app.core.exceptions import register_exception_handlers
 from app.core.logging import configure_logging
 from app.core.redis import close_redis
 from app.database.session import dispose_engine, init_engine
+
+# Internal callers: the container health check (127.0.0.1) and the bot/worker/Nginx on the
+# Docker network ("api"). URLs are never built from the Host header (PUBLIC_BASE_URL is
+# used), so accepting these names is safe.
+INTERNAL_HOSTS = ("api", "localhost", "127.0.0.1")
+
+
+def allowed_hosts(settings: Settings) -> list[str]:
+    if "*" in settings.trusted_hosts:
+        return ["*"]
+    return [*settings.trusted_hosts, *INTERNAL_HOSTS]
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -48,11 +60,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_headers=["Authorization", "Content-Type", "Idempotency-Key", "X-Request-ID"],
         expose_headers=["X-Request-ID"],
     )
-    app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.trusted_hosts)
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts(settings))
     app.add_middleware(RequestContextMiddleware)
 
     register_exception_handlers(app)
     app.include_router(api_router, prefix=settings.api_v1_prefix)
+    if settings.storage_backend == "local" and not settings.is_production:
+        # In Docker/production Nginx serves /media directly from the shared volume.
+        app.mount(
+            settings.media_url,
+            StaticFiles(directory=settings.media_root, check_dir=False),
+            name="media",
+        )
     return app
 
 

@@ -26,12 +26,21 @@ function ServiceRow({ label, ok }: { label: string; ok: boolean }) {
   );
 }
 
-export function SystemStatus() {
+export function SystemStatus({ compact = false }: { compact?: boolean }) {
   const { data, error, isPending, isFetching, refetch } = useQuery({
     queryKey: ["system", "readiness"],
     queryFn: fetchReadiness,
     refetchInterval: 30_000,
   });
+
+  if (compact) {
+    const ok = data?.status === "ok";
+    return (
+      <Badge variant={isPending ? "secondary" : ok ? "success" : "destructive"}>
+        {isPending ? "Tekshirilmoqda…" : ok ? "Tizim ishlayapti" : "Tizimda muammo"}
+      </Badge>
+    );
+  }
 
   return (
     <Card className="w-full max-w-md">

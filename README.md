@@ -4,10 +4,10 @@ Universal e-commerce platform for the Uzbek market: a Telegram bot for customers
 a web admin panel for staff, a FastAPI backend, PostgreSQL, Redis, Click and Payme
 payments, and nationwide delivery. Uzbek (Latin) interface, UZS, Asia/Tashkent.
 
-> **Status: Phases 1–2 complete** (architecture, project structure, configuration,
-> Docker). Catalog, cart, orders, payments, bot flows and admin screens are built in
-> later phases; see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full plan.
-> Nothing in this repository processes real payments yet.
+> **Status: all 12 phases done, except the Click and Payme adapters**, which need
+> the official provider documentation and merchant credentials (see
+> [`docs/PAYMENTS.md`](docs/PAYMENTS.md)). Until then, use cash on delivery or the
+> clearly labelled test mode. Deployment: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
 ## Contents
 
@@ -121,6 +121,8 @@ migrations before committing them.
 ## Tests and quality checks
 
 Backend tests use a **separate database** (`online_store_test`) and Redis DB 15.
+The test run **drops and rebuilds that database's schema** with the real migrations,
+so never point `TEST_DATABASE_URL` at a database holding real data.
 
 ```bash
 cd backend
@@ -132,6 +134,10 @@ TEST_DATABASE_URL=postgresql+asyncpg://u:p@host/db TEST_REDIS_URL=redis://host:6
 
 cd frontend
 npm run lint && npm run typecheck && npm test && npm run build
+
+# Browser smoke test of the admin panel against a running stack (creates test data;
+# never against production)
+ADMIN_EMAIL=... ADMIN_PASSWORD=... node frontend/e2e/admin-smoke.cjs /tmp/shots
 ```
 
 ## Environment variables
@@ -145,9 +151,9 @@ npm run lint && npm run typecheck && npm test && npm run build
 | `PROJECT_NAME`, `TIMEZONE` | `Online Store`, `Asia/Tashkent` | Display name / business timezone. |
 | `LOG_LEVEL`, `LOG_JSON` | `INFO`, `true` | Logging. Secrets, tokens, signatures and card-like numbers are redacted. |
 | `HTTP_PORT` | `80` | Host port for Nginx. |
-| `PUBLIC_BASE_URL` | `http://localhost` | Public site URL (payment return URLs, media links). |
+| `PUBLIC_BASE_URL` | `http://localhost` | Public site URL (payment links); must be `https://` in production. |
 | `CORS_ORIGINS` | localhost | Comma-separated allowed origins; no `*` in production. |
-| `TRUSTED_HOSTS` | `*` | Accepted `Host` headers; set your domains in production. |
+| `TRUSTED_HOSTS` | `*` | Accepted `Host` headers; your domain(s) are required in production (internal names `api`, `localhost` are always allowed). |
 | `API_WORKERS` | `2` | Uvicorn workers in production. |
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | — | Database credentials (required by Compose). |
 | `DATABASE_URL` | built by Compose | Only needed outside Docker. |
@@ -157,6 +163,7 @@ npm run lint && npm run typecheck && npm test && npm run build
 | `ACCESS_TOKEN_TTL_MINUTES` / `REFRESH_TOKEN_TTL_DAYS` | `15` / `14` | Admin session lifetimes. |
 | `RATE_LIMIT_LOGIN_PER_MINUTE` | `10` | Login attempts per IP. |
 | `BOT_TOKEN` | empty | Telegram bot token. |
+| `BOT_MEDIA_BASE_URL` | Nginx in Docker | Internal URL the bot downloads product photos from. |
 | `BOT_API_SECRET` | — | Secret the bot sends to customer API endpoints, 32+ chars. |
 | `TELEGRAM_ADMIN_IDS` | empty | Telegram IDs that receive staff alerts. |
 | `STORAGE_BACKEND`, `MAX_UPLOAD_SIZE_MB` | `local`, `5` | Upload storage and size limit. |
@@ -170,26 +177,49 @@ Never commit `.env`.
 
 ## Production deployment
 
-1. On a server with Docker, clone the repository and `cd dokon-722`.
-2. `cp .env.example .env`, then set strong `POSTGRES_PASSWORD`, `JWT_SECRET_KEY` and `BOT_API_SECRET`,
-   your domains in `CORS_ORIGINS` / `TRUSTED_HOSTS` / `PUBLIC_BASE_URL`, and `BOT_TOKEN`.
-3. Start the stack:
-   ```bash
-   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
-   ```
-   This forces `ENVIRONMENT=production`; the backend **refuses to start** with default
-   or weak secrets, `DEBUG=true`, wildcard CORS, or live payments without credentials.
-4. **TLS:** terminate HTTPS in front of Nginx (a host-level Caddy/Nginx with Let's Encrypt,
-   or a load balancer) and forward to `HTTP_PORT`. Payment callbacks require HTTPS.
-5. Only Nginx publishes a port. PostgreSQL and Redis are reachable only on the
-   internal Docker network. All app containers run as a non-root user (uid 10001).
-6. Back up the `postgres_data` and `media` volumes (a full backup/restore runbook comes in Phase 12).
+Step-by-step guide (TLS, configuration, first admin, store setup, backups, updates,
+operations, go-live checklist): [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
-## Click, Payme, delivery, admin accounts
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+scripts/backup.sh /var/backups/dokon      # scripts/restore.sh <dir> to restore
+```
+
+## Documentation
+
+| Document | Contents |
+|---|---|
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Architecture, decisions, roadmap |
+| [`docs/DATABASE.md`](docs/DATABASE.md) | ERD, integrity rules, migrations |
+| [`docs/SERVICES.md`](docs/SERVICES.md) | Business rules: stock, orders, promo, delivery |
+| [`docs/API.md`](docs/API.md) | HTTP API, auth, permissions |
+| [`docs/BOT.md`](docs/BOT.md) | Telegram bot flows |
+| [`docs/ADMIN_PANEL.md`](docs/ADMIN_PANEL.md) | Admin panel pages |
+| [`docs/PAYMENTS.md`](docs/PAYMENTS.md) | Payment architecture, what Click/Payme need |
+| [`docs/WORKER.md`](docs/WORKER.md) | Background jobs and notifications |
+| [`docs/SECURITY.md`](docs/SECURITY.md) | Security review |
+| [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Production deployment and operations |
+
+## Admin account setup
+
+Create the first super-admin (the password is asked interactively, or read from
+`ADMIN_PASSWORD`; never pass it as an argument):
+
+```bash
+# Docker
+docker compose exec api python -m app.scripts.create_admin --email owner@example.uz --name "Ism Familiya"
+# Local
+cd backend && uv run python -m app.scripts.create_admin --email owner@example.uz --name "Ism Familiya"
+```
+
+Further staff accounts are created by a super-admin in the admin panel (or `POST /api/v1/admin/staff`).
+Roles: `super_admin` (everything), `manager` (no staff, settings, audit log), `operator`
+(orders, read-only catalog, inventory and customers). The full matrix is in `docs/API.md`.
+
+## Click, Payme, delivery
 
 These sections are completed in their phases:
 
-- **Admin account setup:** Phase 5 adds `scripts/create_admin`.
 - **Delivery configuration:** Phase 8 (regions and districts are seeded in Phase 3).
-- **Click / Payme setup:** Phase 9. This needs the official documentation and sandbox credentials;
-  see [`docs/ARCHITECTURE.md` §7](docs/ARCHITECTURE.md#7-payments-phase-9--requirements-and-blockers).
+- **Click / Payme setup:** see [`docs/PAYMENTS.md`](docs/PAYMENTS.md). Until the adapters are written from the
+  official documentation, keep `PAYMENT_MODE=mock` (simulated, clearly labelled) or offer cash on delivery.
