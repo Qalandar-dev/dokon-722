@@ -588,6 +588,8 @@ class OrderService:
             self._set_status(order, order_target, actor, comment, now)
             if order_target is OrderStatus.DELIVERED:
                 await self._on_delivered(order, actor, now)
+        if target is DeliveryStatus.RETURNED:
+            await self._on_returned(order, actor, comment, now)
         record_audit(
             self.session,
             admin_user_id=admin_user_id,
@@ -598,6 +600,39 @@ class OrderService:
         )
         await self.session.commit()
         return await self._load(order.id)
+
+    async def _on_returned(
+        self, order: Order, actor: Actor, comment: str | None, now: datetime
+    ) -> None:
+        """The parcel came back to the store: the sale did not happen.
+
+        The order is cancelled and the goods go back on the shelf. An unpaid (cash) order's
+        payment is cancelled; a paid order keeps "paid" so staff record the refund next.
+        """
+        reason = comment or "Mijozga yetkazib bo‘lmadi, jo‘natma qaytdi"
+        if order.status is not OrderStatus.CANCELLED:
+            self._set_status(order, OrderStatus.CANCELLED, actor, reason, now)
+            order.cancel_reason = reason
+        if order.payment_status in {
+            PaymentStatus.PENDING,
+            PaymentStatus.PROCESSING,
+            PaymentStatus.FAILED,
+        }:
+            self._set_payment_status(order, PaymentStatus.CANCELLED, actor)
+        if order.stock_state is StockState.SOLD:
+            await self.inventory.return_to_stock(
+                _stock_lines(order),
+                order_id=order.id,
+                admin_user_id=actor.admin_user_id,
+                reason="Jo‘natma qaytdi",
+            )
+            order.stock_state = StockState.RETURNED
+            await self._bump_sold_count(order, -1)
+        elif order.stock_state is StockState.RESERVED:
+            await self.inventory.release(_stock_lines(order), order_id=order.id)
+            order.stock_state = StockState.RELEASED
+        order.reservation_expires_at = None
+        await self.promos.release(order.id)
 
     async def _on_delivered(self, order: Order, actor: Actor, now: datetime) -> None:
         # Cash collected by the courier on delivery.

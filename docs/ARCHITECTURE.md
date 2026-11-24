@@ -1,6 +1,6 @@
 # Online Store — Architecture and Delivery Plan
 
-Status: **Phases 1–7 complete.** Later phases need approval before work starts.
+Status: **Phases 1–8 complete.** Later phases need approval before work starts.
 Last updated: 2026-11-23.
 
 ---
@@ -288,7 +288,7 @@ Architecture: a `PaymentProvider` interface (`create_payment(order) → redirect
 | 5 ✅ | Auth (login, refresh rotation, logout, RBAC deps), public, customer and admin APIs, rate limiting, `create_admin` script — see [API.md](API.md) | API tests incl. permission matrix |
 | 6 ✅ | Telegram bot — see [BOT.md](BOT.md) | Handler tests with a mocked API/Bot |
 | 7 ✅ | Admin panel — see [ADMIN_PANEL.md](ADMIN_PANEL.md) | Component tests, a Playwright smoke test of key flows |
-| 8 | Checkout, orders, inventory and delivery end-to-end | Order lifecycle tests |
+| 8 ✅ | Checkout, orders, inventory and delivery end-to-end (returned parcels, settings-driven low stock, cross-interface test) | Order lifecycle tests |
 | 9 | Click + Payme adapters (needs §7 inputs) | Callback validation, signature, idempotency and amount tests |
 | 10 | Worker jobs: notifications, reservation expiry, low stock, scheduled reports | Job tests |
 | 11 | Security hardening, CI (GitHub Actions), coverage gaps | Security review checklist |

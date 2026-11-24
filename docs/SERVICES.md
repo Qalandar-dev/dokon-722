@@ -32,6 +32,7 @@ not at all. Errors are `AppError` subclasses with an Uzbek message and a stable 
 | Cancelled / payment window expired before sale | reservation released | `released` |
 | Cancelled after sale (not shipped yet) | returned to stock | `returned` |
 | Refund after delivery, goods back on the shelf | returned to stock (staff choice) | `returned` |
+| Parcel returned undelivered (delivery status `returned`) | returned to stock; order cancelled; unpaid payment cancelled, paid stays `paid` for a refund | `returned` |
 
 Unpaid Click/Payme orders hold stock for `ORDER_RESERVATION_TTL_MINUTES` (default 30);
 `OrderService.expire_unpaid` cancels them (wired to the worker in Phase 10).
@@ -41,7 +42,7 @@ Unpaid Click/Payme orders hold stock for `ORDER_RESERVATION_TTL_MINUTES` (defaul
 See the docstring of `app/services/order_status.py`. Highlights:
 - online orders are confirmed only after payment; cash orders can be confirmed immediately;
 - customers can cancel while the order is new or confirmed and unpaid; paid orders go through staff;
-- shipped orders cannot be cancelled, only refunded;
+- shipped orders cannot be cancelled by staff; if the parcel comes back (`delivery_failed → returned`) the order is cancelled automatically and the goods return to stock;
 - delivery-status progress (shipped, out for delivery, delivered) moves the order status with it;
 - a cash order becomes paid when it is delivered.
 

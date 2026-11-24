@@ -37,7 +37,7 @@ def test_allowed_order_transitions(current: OrderStatus, target: OrderStatus) ->
     ("current", "target"),
     [
         (O.PENDING, O.DELIVERED),  # cannot skip fulfilment
-        (O.SHIPPED, O.CANCELLED),  # goods left the warehouse: refund instead
+        (O.SHIPPED, O.PENDING),  # no going back once shipped
         (O.DELIVERED, O.PENDING),
         (O.CANCELLED, O.CONFIRMED),  # no resurrection
         (O.REFUNDED, O.DELIVERED),  # terminal
@@ -81,3 +81,10 @@ def test_online_orders_need_payment_before_confirmation() -> None:
 def test_error_message_is_uzbek() -> None:
     with pytest.raises(InvalidTransitionError, match="Yetkazildi"):
         rules.ensure_order_transition(O.DELIVERED, O.CANCELLED)
+
+
+def test_shipped_orders_are_not_staff_cancellable() -> None:
+    """The table allows shipped → cancelled only for returned parcels; a direct staff
+    cancellation of a shipped order is refused by OrderService.cancel."""
+    assert O.SHIPPED not in rules.STAFF_CANCELLABLE
+    assert O.OUT_FOR_DELIVERY not in rules.STAFF_CANCELLABLE

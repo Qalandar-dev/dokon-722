@@ -27,6 +27,7 @@ from app.models import (
 from app.services.audit import diff, record_audit
 from app.services.catalog import Page
 from app.services.inventory import InventoryService
+from app.services.store_settings import StoreSettingsService
 from app.services.uploads import image_key, validate_image
 
 MAX_IMAGES_PER_PRODUCT = 10
@@ -155,7 +156,8 @@ class AdminCatalogService:
         if is_active is not None:
             stmt = stmt.where(Product.is_active == is_active)
         if low_stock:
-            threshold = func.coalesce(Inventory.low_stock_threshold, 5)
+            default = await StoreSettingsService(self.session).low_stock_threshold()
+            threshold = func.coalesce(Inventory.low_stock_threshold, default)
             low = (
                 select(ProductVariant.product_id)
                 .join(Inventory, Inventory.variant_id == ProductVariant.id)

@@ -12,6 +12,9 @@ Payment status:
 Delivery status:
     awaiting_dispatch → preparing → shipped → out_for_delivery → delivered
     shipped | out_for_delivery → delivery_failed → out_for_delivery (retry) | returned
+
+A returned parcel cancels the order and puts the goods back in stock; a paid order then
+needs a refund. Staff cannot cancel a shipped order directly.
 """
 
 from __future__ import annotations
@@ -25,8 +28,9 @@ ORDER_TRANSITIONS: dict[OrderStatus, frozenset[OrderStatus]] = {
     O.PENDING: frozenset({O.CONFIRMED, O.CANCELLED}),
     O.CONFIRMED: frozenset({O.PROCESSING, O.SHIPPED, O.CANCELLED}),
     O.PROCESSING: frozenset({O.SHIPPED, O.CANCELLED}),
-    O.SHIPPED: frozenset({O.OUT_FOR_DELIVERY, O.DELIVERED}),
-    O.OUT_FOR_DELIVERY: frozenset({O.DELIVERED}),
+    # → cancelled only when the parcel comes back (delivery status "returned").
+    O.SHIPPED: frozenset({O.OUT_FOR_DELIVERY, O.DELIVERED, O.CANCELLED}),
+    O.OUT_FOR_DELIVERY: frozenset({O.DELIVERED, O.CANCELLED}),
     O.DELIVERED: frozenset({O.REFUNDED}),
     O.CANCELLED: frozenset({O.REFUNDED}),
     O.REFUNDED: frozenset(),

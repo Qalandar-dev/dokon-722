@@ -418,3 +418,61 @@ async def test_concurrent_duplicate_submission(engine: AsyncEngine, last_unit) -
     async with AsyncSession(engine) as s:
         assert await s.scalar(select(func.count()).where(Order.user_id == ids["users"][0])) == 1
         assert await stock(s, ids["variant"]) == (1, 1)
+
+
+# --- Returned parcels ------------------------------------------------------------------
+
+
+async def test_returned_cash_parcel_cancels_order_and_restocks(
+    db: AsyncSession, admin_id: uuid.UUID
+) -> None:
+    order = await _placed(db, method=PaymentMethod.CASH_ON_DELIVERY)
+    variant_id = order.items[0].variant_id
+    assert variant_id is not None
+    service = OrderService(db)
+    await service.confirm(order.id, admin_user_id=admin_id)
+    await service.change_delivery_status(order.id, DeliveryStatus.SHIPPED, admin_user_id=admin_id)
+    with pytest.raises(BusinessRuleError):  # staff can't simply cancel a shipped order
+        await service.cancel(order.id, actor=Actor.admin(admin_id))
+    await service.change_delivery_status(
+        order.id, DeliveryStatus.DELIVERY_FAILED, admin_user_id=admin_id
+    )
+    assert await stock(db, variant_id) == (8, 0)  # still out with the courier
+
+    returned = await service.change_delivery_status(
+        order.id, DeliveryStatus.RETURNED, admin_user_id=admin_id, comment="Mijoz telefonni olmadi"
+    )
+    assert returned.status is OrderStatus.CANCELLED
+    assert returned.payment_status is PaymentStatus.CANCELLED
+    assert returned.stock_state is StockState.RETURNED
+    assert returned.cancel_reason == "Mijoz telefonni olmadi"
+    assert await stock(db, variant_id) == (10, 0)  # back on the shelf
+    product = await db.get(Product, returned.items[0].product_id, populate_existing=True)
+    assert product is not None
+    assert product.sold_count == 0
+
+
+async def test_returned_paid_parcel_then_refund(db: AsyncSession, admin_id: uuid.UUID) -> None:
+    order = await _placed(db)
+    variant_id = order.items[0].variant_id
+    assert variant_id is not None
+    service = OrderService(db)
+    await service.confirm_payment(order.id)
+    await service.confirm(order.id, admin_user_id=admin_id)
+    await service.change_status(order.id, OrderStatus.SHIPPED, admin_user_id=admin_id)
+    await service.change_delivery_status(
+        order.id, DeliveryStatus.DELIVERY_FAILED, admin_user_id=admin_id
+    )
+    returned = await service.change_delivery_status(
+        order.id, DeliveryStatus.RETURNED, admin_user_id=admin_id
+    )
+    assert returned.status is OrderStatus.CANCELLED
+    assert returned.payment_status is PaymentStatus.PAID  # money still has to go back
+    assert await stock(db, variant_id) == (10, 0)
+
+    refunded = await service.record_refund(
+        order.id, admin_user_id=admin_id, restock=True, reason="Jo‘natma qaytdi"
+    )
+    assert refunded.status is OrderStatus.REFUNDED
+    assert refunded.payment_status is PaymentStatus.REFUNDED
+    assert await stock(db, variant_id) == (10, 0)  # not restocked twice
