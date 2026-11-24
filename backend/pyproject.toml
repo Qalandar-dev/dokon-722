@@ -44,6 +44,7 @@ ignore = ["RUF001", "RUF002", "RUF003"]  # Uzbek apostrophes (o‘, g‘) are in
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "S105", "S106"]
 "app/bot/texts.py" = ["E501"]  # user-facing sentences read better unwrapped
+"app/workers/messages.py" = ["E501"]
 "app/bot/handlers/**" = ["S101"]  # asserts narrow aiogram's Optional fields (always set in private chats)
 
 [tool.pytest.ini_options]

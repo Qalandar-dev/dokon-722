@@ -8,6 +8,7 @@ from sqlalchemy import (
     BigInteger,
     CheckConstraint,
     ForeignKey,
+    Identity,
     Index,
     Integer,
     String,
@@ -37,6 +38,8 @@ class Notification(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         ),
     )
 
+    # Send order: several notifications written in one transaction share created_at.
+    seq: Mapped[int] = mapped_column(BigInteger, Identity(always=True), unique=True)
     user_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), index=True
     )

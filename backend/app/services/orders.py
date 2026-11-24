@@ -38,6 +38,7 @@ from app.models.enums import (
     StatusField,
     StockState,
 )
+from app.services import notifications
 from app.services import order_status as rules
 from app.services.audit import record_audit
 from app.services.cart import CartService, CartSummary
@@ -388,6 +389,20 @@ class OrderService:
             order, StatusField.STATUS, None, OrderStatus.PENDING, Actor.customer(req.user_id)
         )
         await CartService(self.session).clear_in_transaction(req.user_id)
+        await notifications.enqueue_staff(
+            self.session,
+            get_settings(),
+            "staff.new_order",
+            {
+                **notifications.order_payload(order),
+                "recipient": recipient_name,
+                "phone": phone,
+                "region": p.location.region_name,
+                "district": p.location.district_name,
+                "items": sum(line.quantity for line in p.cart.lines),
+            },
+            setting_key="notifications.new_order_to_staff",
+        )
         await self.session.commit()
         return await self._load(order.id)
 
@@ -424,6 +439,9 @@ class OrderService:
                 comment=comment,
             )
         )
+        # Every status change passes here, so this is the one place to notify the customer.
+        if (event := notifications.customer_event(order, field, from_value, to_value)) is not None:
+            notifications.enqueue_customer(self.session, order, event, comment)
 
     def _set_status(
         self, order: Order, target: OrderStatus, actor: Actor, comment: str | None, now: datetime

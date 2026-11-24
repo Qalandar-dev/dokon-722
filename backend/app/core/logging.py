@@ -108,7 +108,7 @@ def configure_logging(level: str = "INFO", *, json_output: bool = True) -> None:
 
     for noisy in ("uvicorn.access", "aiogram.event"):
         logging.getLogger(noisy).setLevel(logging.WARNING)
-    # Uvicorn installs its own handlers; route everything through ours instead.
-    for name in ("uvicorn", "uvicorn.error", "uvicorn.access"):
+    # Uvicorn and arq install their own handlers; route them through ours (JSON + redaction).
+    for name in ("uvicorn", "uvicorn.error", "uvicorn.access", "arq", "arq.worker", "arq.jobs"):
         logging.getLogger(name).handlers.clear()
         logging.getLogger(name).propagate = True
