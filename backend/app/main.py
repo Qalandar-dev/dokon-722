@@ -18,6 +18,17 @@ from app.core.logging import configure_logging
 from app.core.redis import close_redis
 from app.database.session import dispose_engine, init_engine
 
+# Internal callers: the container health check (127.0.0.1) and the bot/worker/Nginx on the
+# Docker network ("api"). URLs are never built from the Host header (PUBLIC_BASE_URL is
+# used), so accepting these names is safe.
+INTERNAL_HOSTS = ("api", "localhost", "127.0.0.1")
+
+
+def allowed_hosts(settings: Settings) -> list[str]:
+    if "*" in settings.trusted_hosts:
+        return ["*"]
+    return [*settings.trusted_hosts, *INTERNAL_HOSTS]
+
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
@@ -49,7 +60,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_headers=["Authorization", "Content-Type", "Idempotency-Key", "X-Request-ID"],
         expose_headers=["X-Request-ID"],
     )
-    app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.trusted_hosts)
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts(settings))
     app.add_middleware(RequestContextMiddleware)
 
     register_exception_handlers(app)

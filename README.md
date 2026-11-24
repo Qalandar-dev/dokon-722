@@ -4,11 +4,10 @@ Universal e-commerce platform for the Uzbek market: a Telegram bot for customers
 a web admin panel for staff, a FastAPI backend, PostgreSQL, Redis, Click and Payme
 payments, and nationwide delivery. Uzbek (Latin) interface, UZS, Asia/Tashkent.
 
-> **Status: Phases 1–8, 10 and 11 complete (security review: [`docs/SECURITY.md`](docs/SECURITY.md)) (incl. Telegram notifications — [`docs/WORKER.md`](docs/WORKER.md)), payments architecture done (Click/Payme adapters need the official docs — see [`docs/PAYMENTS.md`](docs/PAYMENTS.md))** (architecture, configuration, Docker, database,
-> business services, HTTP API, Telegram bot and admin panel — see [`docs/ADMIN_PANEL.md`](docs/ADMIN_PANEL.md), [`docs/DATABASE.md`](docs/DATABASE.md),
-> [`docs/SERVICES.md`](docs/SERVICES.md), [`docs/API.md`](docs/API.md) and [`docs/BOT.md`](docs/BOT.md)). Catalog, cart, orders, payments, bot flows and admin screens are built in
-> later phases; see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full plan.
-> Nothing in this repository processes real payments yet.
+> **Status: all 12 phases done, except the Click and Payme adapters**, which need
+> the official provider documentation and merchant credentials (see
+> [`docs/PAYMENTS.md`](docs/PAYMENTS.md)). Until then, use cash on delivery or the
+> clearly labelled test mode. Deployment: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
 ## Contents
 
@@ -152,9 +151,9 @@ ADMIN_EMAIL=... ADMIN_PASSWORD=... node frontend/e2e/admin-smoke.cjs /tmp/shots
 | `PROJECT_NAME`, `TIMEZONE` | `Online Store`, `Asia/Tashkent` | Display name / business timezone. |
 | `LOG_LEVEL`, `LOG_JSON` | `INFO`, `true` | Logging. Secrets, tokens, signatures and card-like numbers are redacted. |
 | `HTTP_PORT` | `80` | Host port for Nginx. |
-| `PUBLIC_BASE_URL` | `http://localhost` | Public site URL (payment return URLs, media links). |
+| `PUBLIC_BASE_URL` | `http://localhost` | Public site URL (payment links); must be `https://` in production. |
 | `CORS_ORIGINS` | localhost | Comma-separated allowed origins; no `*` in production. |
-| `TRUSTED_HOSTS` | `*` | Accepted `Host` headers; set your domains in production. |
+| `TRUSTED_HOSTS` | `*` | Accepted `Host` headers; your domain(s) are required in production (internal names `api`, `localhost` are always allowed). |
 | `API_WORKERS` | `2` | Uvicorn workers in production. |
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | — | Database credentials (required by Compose). |
 | `DATABASE_URL` | built by Compose | Only needed outside Docker. |
@@ -178,20 +177,28 @@ Never commit `.env`.
 
 ## Production deployment
 
-1. On a server with Docker, clone the repository and `cd dokon-722`.
-2. `cp .env.example .env`, then set strong `POSTGRES_PASSWORD`, `JWT_SECRET_KEY` and `BOT_API_SECRET`,
-   your domains in `CORS_ORIGINS` / `TRUSTED_HOSTS` / `PUBLIC_BASE_URL`, and `BOT_TOKEN`.
-3. Start the stack:
-   ```bash
-   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
-   ```
-   This forces `ENVIRONMENT=production`; the backend **refuses to start** with default
-   or weak secrets, `DEBUG=true`, wildcard CORS, or live payments without credentials.
-4. **TLS:** terminate HTTPS in front of Nginx (a host-level Caddy/Nginx with Let's Encrypt,
-   or a load balancer) and forward to `HTTP_PORT`. Payment callbacks require HTTPS.
-5. Only Nginx publishes a port. PostgreSQL and Redis are reachable only on the
-   internal Docker network. All app containers run as a non-root user (uid 10001).
-6. Back up the `postgres_data` and `media` volumes (a full backup/restore runbook comes in Phase 12).
+Step-by-step guide (TLS, configuration, first admin, store setup, backups, updates,
+operations, go-live checklist): [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+scripts/backup.sh /var/backups/dokon      # scripts/restore.sh <dir> to restore
+```
+
+## Documentation
+
+| Document | Contents |
+|---|---|
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Architecture, decisions, roadmap |
+| [`docs/DATABASE.md`](docs/DATABASE.md) | ERD, integrity rules, migrations |
+| [`docs/SERVICES.md`](docs/SERVICES.md) | Business rules: stock, orders, promo, delivery |
+| [`docs/API.md`](docs/API.md) | HTTP API, auth, permissions |
+| [`docs/BOT.md`](docs/BOT.md) | Telegram bot flows |
+| [`docs/ADMIN_PANEL.md`](docs/ADMIN_PANEL.md) | Admin panel pages |
+| [`docs/PAYMENTS.md`](docs/PAYMENTS.md) | Payment architecture, what Click/Payme need |
+| [`docs/WORKER.md`](docs/WORKER.md) | Background jobs and notifications |
+| [`docs/SECURITY.md`](docs/SECURITY.md) | Security review |
+| [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Production deployment and operations |
 
 ## Admin account setup
 

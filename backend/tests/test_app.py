@@ -82,3 +82,19 @@ async def test_openapi_available_outside_production(client: httpx.AsyncClient) -
     r = await client.get("/api/v1/openapi.json")
     assert r.status_code == 200
     assert "/api/v1/health/live" in r.json()["paths"]
+
+
+async def test_internal_hosts_always_allowed(settings: Settings) -> None:
+    """With real domains configured, the health check (127.0.0.1) and the bot (api:8000)
+    must still get through; unknown hosts must not."""
+    app = create_app(settings.model_copy(update={"trusted_hosts": ["shop.example.uz"]}))
+    transport = httpx.ASGITransport(app=app)
+    for host, expected in (
+        ("shop.example.uz", 200),
+        ("api:8000", 200),
+        ("127.0.0.1:8000", 200),
+        ("evil.example", 400),
+    ):
+        async with httpx.AsyncClient(transport=transport, base_url=f"http://{host}") as c:
+            r = await c.get("/api/v1/health/live")
+            assert r.status_code == expected, host
