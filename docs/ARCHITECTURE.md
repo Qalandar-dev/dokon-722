@@ -1,6 +1,6 @@
 # Online Store — Architecture and Delivery Plan
 
-Status: **Phases 1–8 and 10 complete; Phase 9 partly (payment architecture + simulated provider; Click/Payme adapters blocked on official docs).** Later phases need approval before work starts.
+Status: **Phases 1–8, 10 and 11 complete; Phase 9 partly (payment architecture + simulated provider; Click/Payme adapters blocked on official docs).** Later phases need approval before work starts.
 Last updated: 2026-11-23.
 
 ---
@@ -291,7 +291,7 @@ Architecture: a `PaymentProvider` interface (`create_payment(order) → redirect
 | 8 ✅ | Checkout, orders, inventory and delivery end-to-end (returned parcels, settings-driven low stock, cross-interface test) | Order lifecycle tests |
 | 9 ◐ | Payment architecture, simulated provider, bot/admin integration ✅; Click + Payme adapters ⛔ blocked on §7 inputs — see [PAYMENTS.md](PAYMENTS.md) | Callback validation, signature, idempotency and amount tests |
 | 10 ✅ | Worker jobs: notifications, reservation expiry, low stock, scheduled reports — see [WORKER.md](WORKER.md) | Job tests |
-| 11 | Security hardening, CI (GitHub Actions), coverage gaps | Security review checklist |
+| 11 ✅ | Security hardening, CI (GitHub Actions), coverage gaps — see [SECURITY.md](SECURITY.md) | Security review checklist |
 | 12 | Docs, backup/restore runbook, production deployment guide | Fresh-server deploy rehearsal |
 
 ## 10. Environment variables

@@ -166,6 +166,10 @@ class Settings(BaseSettings):
             problems.append("DEBUG must be false in production")
         if "*" in self.cors_origins:
             problems.append("CORS_ORIGINS must list explicit origins in production")
+        if "*" in self.trusted_hosts:
+            problems.append("TRUSTED_HOSTS must list your domain(s) in production")
+        if not self.public_base_url.startswith("https://"):
+            problems.append("PUBLIC_BASE_URL must be an https:// URL in production")
         if self.payment_mode is PaymentMode.LIVE:
             if not (self.click_service_id and self.click_merchant_id and self.click_secret_key):
                 problems.append("Click credentials are required when PAYMENT_MODE=live")

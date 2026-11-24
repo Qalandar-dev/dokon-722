@@ -14,7 +14,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.deps import AdminDep, RateLimiterDep, SessionDep, SettingsDep, client_ip
 from app.core.config import Settings
-from app.core.exceptions import AuthenticationError, error_body
+from app.core.exceptions import AuthenticationError, PermissionDeniedError, error_body
 from app.schemas.admin import AdminMeOut, LoginIn, TokenOut
 from app.services.auth import AuthService, TokenPair
 
@@ -46,6 +46,20 @@ def _clear_refresh_cookie(response: Response, settings: Settings) -> None:
         secure=settings.is_production,
         samesite="strict",
     )
+
+
+def check_origin(request: Request, settings: Settings) -> None:
+    """Defence in depth for the cookie-authenticated endpoints (refresh, logout).
+
+    SameSite=Strict already stops cross-site requests; additionally, when the browser
+    states an Origin, it must be our own host or an allowed CORS origin.
+    """
+    origin = request.headers.get("origin")
+    if origin is None:
+        return
+    own = f"{request.url.scheme}://{request.headers.get('host', '')}"
+    if origin != own and origin not in settings.cors_origins:
+        raise PermissionDeniedError("So‘rov manbasi ruxsat etilmagan.", code="bad_origin")
 
 
 def _token_out(pair: TokenPair) -> TokenOut:
@@ -85,6 +99,7 @@ async def refresh(
     settings: SettingsDep,
     refresh_token: RefreshCookie = None,
 ) -> TokenOut | JSONResponse:
+    check_origin(request, settings)
     try:
         if not refresh_token:
             raise AuthenticationError("Sessiya topilmadi. Qayta kiring.", code="invalid_refresh")
@@ -104,11 +119,13 @@ async def refresh(
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 async def logout(
+    request: Request,
     response: Response,
     session: SessionDep,
     settings: SettingsDep,
     refresh_token: RefreshCookie = None,
 ) -> Response:
+    check_origin(request, settings)
     await AuthService(session, settings).logout(refresh_token)
     response.status_code = status.HTTP_204_NO_CONTENT
     _clear_refresh_cookie(response, settings)

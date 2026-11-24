@@ -90,6 +90,7 @@ async def test_simulated_payment_marks_order_paid_once(
     page = await api.get(path, params={"token": _token(url)})
     assert page.status_code == 200
     assert "SINOV REJIMI" in page.text
+    assert "default-src 'none'" in page.headers["content-security-policy"]
     assert "325 000 so‘m" in page.text
 
     complete = path.replace("/checkout", "/complete")

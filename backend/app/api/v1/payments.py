@@ -85,6 +85,17 @@ margin-top:8px;cursor:pointer}}
 </div></body></html>"""
 
 
+# The page has no scripts at all; it may only post its own form.
+_PAGE_HEADERS = {
+    "Cache-Control": "no-store",
+    "X-Frame-Options": "DENY",
+    "Content-Security-Policy": (
+        "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; "
+        "frame-ancestors 'none'; base-uri 'none'"
+    ),
+}
+
+
 def _som(amount: object) -> str:
     return f"{int(float(str(amount))):,}".replace(",", " ") + " so‘m"
 
@@ -128,7 +139,7 @@ async def mock_checkout(
         form = f"<p>To‘lov holati: <b>{html.escape(status)}</b>. Telegram botga qayting.</p>"
     return HTMLResponse(
         _PAGE.format(number=html.escape(order.number), amount=_som(payment.amount), body=form),
-        headers={"Cache-Control": "no-store", "X-Frame-Options": "DENY"},
+        headers=_PAGE_HEADERS,
     )
 
 
@@ -167,5 +178,5 @@ async def mock_complete(
             amount=_som(payment.amount),
             body=f"<p>{html.escape(message)}</p>",
         ),
-        headers={"Cache-Control": "no-store", "X-Frame-Options": "DENY"},
+        headers=_PAGE_HEADERS,
     )

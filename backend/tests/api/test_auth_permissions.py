@@ -173,3 +173,17 @@ async def test_sessions_are_stored_hashed(
     stored = list(await db.scalars(select(AdminSession.token_hash)))
     assert token not in stored
     assert all(len(h) == 64 for h in stored)
+
+
+async def test_refresh_rejects_foreign_origin(
+    api: httpx.AsyncClient, make_admin: AdminFactory
+) -> None:
+    email = (await make_admin())["X-Admin-Email"]
+    api.cookies.clear()
+    await api.post(LOGIN, json={"email": email, "password": PASSWORD})
+    evil = await api.post(REFRESH, headers={"Origin": "https://evil.example"})
+    assert evil.status_code == 403
+    assert evil.json()["error"]["code"] == "bad_origin"
+    own = await api.post(REFRESH, headers={"Origin": "http://testserver"})
+    assert own.status_code == 200
+    assert (await api.post(LOGOUT, headers={"Origin": "https://evil.example"})).status_code == 403
