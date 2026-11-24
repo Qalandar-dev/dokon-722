@@ -226,6 +226,11 @@ class StoreApi:
     async def cancel_order(self, user_id: int, order_id: str) -> dict[str, Any]:
         return await self._request("POST", f"/orders/{order_id}/cancel", user_id=user_id, json={})
 
+    async def start_payment(self, user_id: int, order_id: str) -> dict[str, Any]:
+        return await self._request(
+            "POST", "/payments", user_id=user_id, json={"order_id": order_id}
+        )
+
     async def save_image_file_id(self, image_id: str, file_id: str) -> None:
         await self._request(
             "PUT",

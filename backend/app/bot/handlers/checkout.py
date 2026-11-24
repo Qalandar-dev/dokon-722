@@ -284,15 +284,39 @@ async def step_confirm(callback: CallbackQuery, state: FSMContext, api: StoreApi
                 },
             )
     if order["payment_method"] == "cash_on_delivery":
-        note = t.CASH_PAYMENT_NOTE
-    else:
-        store = await api.store()
-        note = t.ONLINE_PAYMENT_PENDING.format(
-            payment=t.PAYMENT_LABELS.get(order["payment_method"], order["payment_method"]),
-            minutes=store["reservation_minutes"],
+        await edit_or_send(
+            callback, t.ORDER_PLACED + views.order_card(order) + "\n\n" + t.CASH_PAYMENT_NOTE
         )
-    await edit_or_send(callback, t.ORDER_PLACED + views.order_card(order) + "\n\n" + note)
+    else:
+        await edit_or_send(callback, t.ORDER_PLACED + views.order_card(order))
+        assert isinstance(callback.message, Message)
+        await send_payment_link(callback.message, api, user_id, order)
     await callback.answer()
+
+
+async def send_payment_link(
+    message: Message, api: StoreApi, user_id: int, order: dict[str, Any]
+) -> None:
+    """Ask the API for a checkout link and show it as a URL button. The order is marked
+    paid only by the backend after the provider confirms; the bot never decides that."""
+    store = await api.store()
+    label = t.PAYMENT_LABELS.get(order["payment_method"], order["payment_method"])
+    try:
+        started = await api.start_payment(user_id, order["id"])
+    except ApiError as exc:
+        if exc.code != "payment_provider_not_configured":
+            raise
+        await message.answer(
+            t.PAYMENT_UNAVAILABLE.format(reason=exc.message, minutes=store["reservation_minutes"])
+        )
+        return
+    simulated = started["payment"]["is_simulated"]
+    text = t.PAY_PROMPT.format(payment=label, minutes=store["reservation_minutes"])
+    if simulated:
+        text += "\n\n" + t.PAY_SIMULATED
+    await message.answer(
+        text, reply_markup=kb.pay_button(started["checkout_url"], simulated=simulated)
+    )
 
 
 @router.callback_query(Checkout.confirm, CheckoutCb.filter(F.a == "restart"))

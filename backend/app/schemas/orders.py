@@ -16,6 +16,7 @@ from app.models.enums import (
 )
 from app.schemas.catalog import CartOut, DeliveryQuoteOut
 from app.schemas.common import InputSchema, Money, Schema
+from app.schemas.payments import PaymentOut
 from app.services import order_status as rules
 from app.services.orders import CheckoutPreview
 
@@ -253,6 +254,7 @@ class AdminOrderOut(OrderOut):
     idempotency_key: str
     confirmed_at: datetime | None
     history: list[HistoryOut]
+    payments: list[PaymentOut]
 
     @classmethod
     def build(cls, o: Order) -> AdminOrderOut:  # type: ignore[override]
@@ -267,6 +269,7 @@ class AdminOrderOut(OrderOut):
             idempotency_key=o.idempotency_key,
             confirmed_at=o.confirmed_at,
             history=[HistoryOut.model_validate(h) for h in o.history],
+            payments=[PaymentOut.build(p) for p in o.payments],
         )
 
 

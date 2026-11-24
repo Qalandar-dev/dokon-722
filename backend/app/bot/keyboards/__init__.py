@@ -299,8 +299,28 @@ def orders(page: dict[str, Any], labels: list[str]) -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 
+def pay_button(url: str, *, simulated: bool) -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    kb.button(text=t.BTN_PAY_SIMULATED if simulated else t.BTN_PAY, url=url)
+    return kb.as_markup()
+
+
+def is_payable(order: dict[str, Any]) -> bool:
+    return (
+        order["status"] == "pending"
+        and order["payment_method"] in {"click", "payme"}
+        and order["payment_status"] != "paid"
+    )
+
+
 def order_detail(order: dict[str, Any], page: int) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
+    if is_payable(order):
+        kb.row(
+            InlineKeyboardButton(
+                text=t.BTN_PAY, callback_data=OrderCb(a="pay", id=hexid(order["id"]), p=page).pack()
+            )
+        )
     if order["can_cancel"]:
         kb.row(
             InlineKeyboardButton(

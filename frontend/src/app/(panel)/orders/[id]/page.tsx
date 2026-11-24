@@ -13,6 +13,7 @@ import {
   OrderStatusBadge,
   PaymentStatusBadge,
 } from "@/components/layout/status-badge";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input, Textarea } from "@/components/ui/input";
@@ -365,6 +366,23 @@ export default function OrderDetailPage() {
               <p>Usul: {PAYMENT_METHOD[o.payment_method]}</p>
               <p>Holat: {PAYMENT_STATUS[o.payment_status as PaymentStatus]}</p>
               <p>To‘langan: {formatDateTime(o.paid_at)}</p>
+              {o.payments.length > 0 ? (
+                <ul className="mt-2 grid gap-1 border-t pt-2">
+                  {o.payments.map((p) => (
+                    <li key={p.id} className="flex flex-wrap items-center gap-2">
+                      <span className="uppercase">{p.provider}</span>
+                      <PaymentStatusBadge status={p.status} />
+                      {p.is_simulated ? <Badge variant="warning">SINOV</Badge> : null}
+                      <span className="text-muted-foreground text-xs">
+                        {formatDateTime(p.created_at)}
+                      </span>
+                      {p.failure_reason ? (
+                        <span className="text-muted-foreground text-xs">({p.failure_reason})</span>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
               {o.reservation_expires_at ? (
                 <p className="text-muted-foreground">
                   Band qilish muddati: {formatDateTime(o.reservation_expires_at)}

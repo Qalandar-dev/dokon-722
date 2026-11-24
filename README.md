@@ -4,7 +4,7 @@ Universal e-commerce platform for the Uzbek market: a Telegram bot for customers
 a web admin panel for staff, a FastAPI backend, PostgreSQL, Redis, Click and Payme
 payments, and nationwide delivery. Uzbek (Latin) interface, UZS, Asia/Tashkent.
 
-> **Status: Phases 1–8 complete** (architecture, configuration, Docker, database,
+> **Status: Phases 1–8 complete, payments architecture done (Click/Payme adapters need the official docs — see [`docs/PAYMENTS.md`](docs/PAYMENTS.md))** (architecture, configuration, Docker, database,
 > business services, HTTP API, Telegram bot and admin panel — see [`docs/ADMIN_PANEL.md`](docs/ADMIN_PANEL.md), [`docs/DATABASE.md`](docs/DATABASE.md),
 > [`docs/SERVICES.md`](docs/SERVICES.md), [`docs/API.md`](docs/API.md) and [`docs/BOT.md`](docs/BOT.md)). Catalog, cart, orders, payments, bot flows and admin screens are built in
 > later phases; see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full plan.
@@ -214,5 +214,5 @@ Roles: `super_admin` (everything), `manager` (no staff, settings, audit log), `o
 These sections are completed in their phases:
 
 - **Delivery configuration:** Phase 8 (regions and districts are seeded in Phase 3).
-- **Click / Payme setup:** Phase 9. This needs the official documentation and sandbox credentials;
-  see [`docs/ARCHITECTURE.md` §7](docs/ARCHITECTURE.md#7-payments-phase-9--requirements-and-blockers).
+- **Click / Payme setup:** see [`docs/PAYMENTS.md`](docs/PAYMENTS.md). Until the adapters are written from the
+  official documentation, keep `PAYMENT_MODE=mock` (simulated, clearly labelled) or offer cash on delivery.

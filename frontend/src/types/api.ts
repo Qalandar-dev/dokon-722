@@ -113,6 +113,18 @@ export interface HistoryEntry {
   created_at: string;
 }
 
+export interface PaymentAttempt {
+  id: UUID;
+  order_id: UUID;
+  provider: "click" | "payme" | "cash" | "mock";
+  amount: Money;
+  status: PaymentStatus;
+  is_simulated: boolean;
+  failure_reason: string | null;
+  created_at: string;
+  paid_at: string | null;
+}
+
 export interface AdminOrder extends OrderListItem {
   subtotal: Money;
   discount_total: Money;
@@ -137,6 +149,7 @@ export interface AdminOrder extends OrderListItem {
   reservation_expires_at: string | null;
   items: OrderItem[];
   history: HistoryEntry[];
+  payments: PaymentAttempt[];
 }
 
 export interface Image {

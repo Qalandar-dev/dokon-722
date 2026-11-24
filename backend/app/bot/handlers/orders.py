@@ -8,6 +8,7 @@ from app.bot import texts as t
 from app.bot import views
 from app.bot.api_client import StoreApi
 from app.bot.callbacks import OrderCb, uuid_from_hex
+from app.bot.handlers.checkout import send_payment_link
 from app.bot.handlers.common import edit_or_send
 
 router = Router(name="orders")
@@ -48,6 +49,10 @@ async def order_action(callback: CallbackQuery, callback_data: OrderCb, api: Sto
             t.CONFIRM_CANCEL.format(number=order["number"]),
             kb.confirm_cancel(order["id"], callback_data.p),
         )
+    elif callback_data.a == "pay":
+        order = await api.order(user_id, uuid_from_hex(callback_data.id))
+        assert isinstance(callback.message, Message)
+        await send_payment_link(callback.message, api, user_id, order)
     elif callback_data.a == "cancel_yes":
         order = await api.cancel_order(user_id, uuid_from_hex(callback_data.id))
         await edit_or_send(

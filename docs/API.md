@@ -92,6 +92,7 @@ Images only (JPG, PNG, WEBP), detected from file content, not from the name or
 under a random name by the storage backend (local volume now; S3-compatible later) and
 served from `/media/…` by Nginx.
 
-## Not yet implemented
+## Payments
 
-`POST /payments`, `GET /payments/{id}` and the Click/Payme callbacks arrive in Phase 9.
+`POST /payments` `{order_id}` (bot) → `{payment, checkout_url}`; `GET /payments/{id}`.
+`POST /payments/webhook/click|payme` answer 503 until the adapters exist. See `docs/PAYMENTS.md`.

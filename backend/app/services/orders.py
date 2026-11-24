@@ -122,7 +122,11 @@ class OrderService:
         stmt = (
             select(Order)
             .where(Order.id == order_id)
-            .options(selectinload(Order.items), selectinload(Order.history))
+            .options(
+                selectinload(Order.items),
+                selectinload(Order.history),
+                selectinload(Order.payments),
+            )
             .execution_options(populate_existing=True)
         )
         if lock:

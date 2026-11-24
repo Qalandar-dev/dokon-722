@@ -279,3 +279,42 @@ async def test_every_message_uses_html_safe_text(chat: Any) -> None:
     c = chat(800_000_012)
     calls = await c.say("/start")
     assert all(isinstance(x, SendMessage) for x in calls)
+
+
+def _url_buttons(calls: list[Any]) -> dict[str, str]:
+    out: dict[str, str] = {}
+    for c in calls:
+        markup = getattr(c, "reply_markup", None)
+        for row in getattr(markup, "inline_keyboard", []) or []:
+            for b in row:
+                if b.url:
+                    out[b.text] = b.url
+    return out
+
+
+async def test_online_order_gets_a_clearly_simulated_pay_button(
+    chat: Any, db: AsyncSession
+) -> None:
+    c, _ = await _fill_cart(chat, db, 800_000_013, quantity=1)
+    calls = await c.say(t.BTN_CART)
+    calls = await c.click(button(calls, "Rasmiylashtirish"))
+    await c.say("Aziza Karimova")
+    calls = (await c.say("90 765 43 21"))[-1:]
+    calls = await c.click(button(calls, "Toshkent shahri"))
+    calls = await c.click(button(calls, "Bektemir"))
+    calls = await c.click(button(calls, "Kuryer"))
+    await c.say("Amir Temur ko‘chasi 1")
+    calls = await c.click("o:skip:")
+    calls = await c.click(button(calls, "Click"))
+    calls = await c.click(button(calls, "Tasdiqlash"))
+
+    pay = _url_buttons(calls)
+    assert list(pay) == [t.BTN_PAY_SIMULATED]
+    assert "/api/v1/payments/mock/" in pay[t.BTN_PAY_SIMULATED]
+    assert t.PAY_SIMULATED in texts(calls)
+
+    # The order card offers to pay again until it is paid; the same open payment is reused.
+    calls = await c.say(t.BTN_ORDERS)
+    calls = await c.click(button(calls, "OS-"))
+    calls = await c.click(button(calls, "To‘lash"))
+    assert _url_buttons(calls)[t.BTN_PAY_SIMULATED] == pay[t.BTN_PAY_SIMULATED]

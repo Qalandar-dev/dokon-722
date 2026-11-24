@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports -- plain Node script, run outside Next.js */
 const { chromium } = require('playwright');
 /**
  * Admin panel smoke test against a running stack (real API + database).

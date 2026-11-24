@@ -145,10 +145,16 @@ SUMMARY_TOTALS = (
 BTN_CONFIRM = "✅ Tasdiqlash"
 BTN_RESTART = "✏️ O‘zgartirish"
 ORDER_PLACED = "🎉 <b>Buyurtmangiz qabul qilindi!</b>\n\n"
-ONLINE_PAYMENT_PENDING = (
-    "💳 Onlayn to‘lov ({payment}) tez orada ishga tushiriladi. Mahsulotlar siz uchun "
-    "{minutes} daqiqa band qilib turiladi; to‘lov holatini «📦 Buyurtmalarim» bo‘limida "
-    "kuzatishingiz mumkin."
+PAY_PROMPT = (
+    "💳 To‘lov uchun quyidagi tugmani bosing ({payment}). Mahsulotlar siz uchun "
+    "{minutes} daqiqa band qilib turiladi. To‘lov tasdiqlangach, holat «📦 Buyurtmalarim» "
+    "bo‘limida yangilanadi."
+)
+PAY_SIMULATED = "⚠️ Sinov rejimi: bu haqiqiy to‘lov emas, pul yechilmaydi."
+BTN_PAY = "💳 To‘lash"
+BTN_PAY_SIMULATED = "💳 To‘lash (SINOV)"
+PAYMENT_UNAVAILABLE = (
+    "💳 Onlayn to‘lov hozircha ishlamayapti: {reason}\nBuyurtmangiz {minutes} daqiqa saqlanadi."
 )
 CASH_PAYMENT_NOTE = "💵 To‘lovni buyurtmani olganingizda kuryerga qilasiz. Tez orada operatorimiz siz bilan bog‘lanadi."
 CHECKOUT_EXPIRED = "Rasmiylashtirish sessiyasi eskirgan. Iltimos, savatdan qaytadan boshlang."
